@@ -46,90 +46,90 @@ public class NaturalSpawnerMixin
 
     @Shadow @Final private static MobCategory[] SPAWNING_CATEGORIES;
 
-    @Redirect(method = "isValidSpawnPostitionForType",
-            at = @At(
-            value = "INVOKE",
-            target = "Lnet/minecraft/server/level/ServerLevel;noCollision(Lnet/minecraft/world/phys/AABB;)Z"
-    ))
-    private static boolean doesNotCollide(ServerLevel world, AABB bb)
-    {
-        //.doesNotCollide is VERY expensive. On the other side - most worlds are not made of trapdoors in
-        // various configurations, but solid and 'passable' blocks, like air, water grass, etc.
-        // checking if in the BB of the entity are only passable blocks is very cheap and covers most cases
-        // in case something more complex happens - we default to full block collision check
-        if (!CarpetSettings.lagFreeSpawning)
-        {
-            return world.noCollision(bb);
-        }
-        int minX = Mth.floor(bb.minX);
-        int minY = Mth.floor(bb.minY);
-        int minZ = Mth.floor(bb.minZ);
-        int maxY = Mth.ceil(bb.maxY)-1;
-        BlockPos.MutableBlockPos blockpos = new BlockPos.MutableBlockPos();
-        if (bb.getXsize() <= 1) // small mobs
-        {
-            for (int y=minY; y <= maxY; y++)
-            {
-                blockpos.set(minX,y,minZ);
-                VoxelShape box = world.getBlockState(blockpos).getCollisionShape(world, blockpos);
-                if (box != Shapes.empty())
-                {
-                    if (box == Shapes.block())
-                    {
-                        return false;
-                    }
-                    else
-                    {
-                        return world.noCollision(bb);
-                    }
-                }
-            }
-            return true;
-        }
-        // this code is only applied for mobs larger than 1 block in footprint
-        int maxX = Mth.ceil(bb.maxX)-1;
-        int maxZ = Mth.ceil(bb.maxZ)-1;
-        for (int y = minY; y <= maxY; y++)
-            for (int x = minX; x <= maxX; x++)
-                for (int z = minZ; z <= maxZ; z++)
-                {
-                    blockpos.set(x, y, z);
-                    VoxelShape box = world.getBlockState(blockpos).getCollisionShape(world, blockpos);
-                    if (box != Shapes.empty())
-                    {
-                        if (box == Shapes.block())
-                        {
-                            return false;
-                        }
-                        else
-                        {
-                            return world.noCollision(bb);
-                        }
-                    }
-                }
-        int min_below = minY - 1;
-        // we need to check blocks below for extended hitbox and in that case call
-        // only applies to 'large mobs', slimes, spiders, magmacubes, ghasts, etc.
-        for (int x = minX; x <= maxX; x++)
-        {
-            for (int z = minZ; z <= maxZ; z++)
-            {
-                blockpos.set(x, min_below, z);
-                BlockState state = world.getBlockState(blockpos);
-                Block block = state.getBlock();
-                if (
-                        state.is(BlockTags.FENCES) ||
-                        state.is(BlockTags.WALLS) ||
-                        ((block instanceof FenceGateBlock) && !state.getValue(FenceGateBlock.OPEN))
-                )
-                {
-                    if (x == minX || x == maxX || z == minZ || z == maxZ) return world.noCollision(bb);
-                    return false;
-                }
-            }
-        }
-        return true;
-    }
+//    @Redirect(method = "isValidSpawnPostitionForType",
+//            at = @At(
+//            value = "INVOKE",
+//            target = "Lnet/minecraft/server/level/ServerLevel;noCollision(Lnet/minecraft/world/phys/AABB;)Z"
+//    ))
+//    private static boolean doesNotCollide(ServerLevel world, AABB bb)
+//    {
+//        //.doesNotCollide is VERY expensive. On the other side - most worlds are not made of trapdoors in
+//        // various configurations, but solid and 'passable' blocks, like air, water grass, etc.
+//        // checking if in the BB of the entity are only passable blocks is very cheap and covers most cases
+//        // in case something more complex happens - we default to full block collision check
+//        if (!CarpetSettings.lagFreeSpawning)
+//        {
+//            return world.noCollision(bb);
+//        }
+//        int minX = Mth.floor(bb.minX);
+//        int minY = Mth.floor(bb.minY);
+//        int minZ = Mth.floor(bb.minZ);
+//        int maxY = Mth.ceil(bb.maxY)-1;
+//        BlockPos.MutableBlockPos blockpos = new BlockPos.MutableBlockPos();
+//        if (bb.getXsize() <= 1) // small mobs
+//        {
+//            for (int y=minY; y <= maxY; y++)
+//            {
+//                blockpos.set(minX,y,minZ);
+//                VoxelShape box = world.getBlockState(blockpos).getCollisionShape(world, blockpos);
+//                if (box != Shapes.empty())
+//                {
+//                    if (box == Shapes.block())
+//                    {
+//                        return false;
+//                    }
+//                    else
+//                    {
+//                        return world.noCollision(bb);
+//                    }
+//                }
+//            }
+//            return true;
+//        }
+//        // this code is only applied for mobs larger than 1 block in footprint
+//        int maxX = Mth.ceil(bb.maxX)-1;
+//        int maxZ = Mth.ceil(bb.maxZ)-1;
+//        for (int y = minY; y <= maxY; y++)
+//            for (int x = minX; x <= maxX; x++)
+//                for (int z = minZ; z <= maxZ; z++)
+//                {
+//                    blockpos.set(x, y, z);
+//                    VoxelShape box = world.getBlockState(blockpos).getCollisionShape(world, blockpos);
+//                    if (box != Shapes.empty())
+//                    {
+//                        if (box == Shapes.block())
+//                        {
+//                            return false;
+//                        }
+//                        else
+//                        {
+//                            return world.noCollision(bb);
+//                        }
+//                    }
+//                }
+//        int min_below = minY - 1;
+//        // we need to check blocks below for extended hitbox and in that case call
+//        // only applies to 'large mobs', slimes, spiders, magmacubes, ghasts, etc.
+//        for (int x = minX; x <= maxX; x++)
+//        {
+//            for (int z = minZ; z <= maxZ; z++)
+//            {
+//                blockpos.set(x, min_below, z);
+//                BlockState state = world.getBlockState(blockpos);
+//                Block block = state.getBlock();
+//                if (
+//                        state.is(BlockTags.FENCES) ||
+//                        state.is(BlockTags.WALLS) ||
+//                        ((block instanceof FenceGateBlock) && !state.getValue(FenceGateBlock.OPEN))
+//                )
+//                {
+//                    if (x == minX || x == maxX || z == minZ || z == maxZ) return world.noCollision(bb);
+//                    return false;
+//                }
+//            }
+//        }
+//        return true;
+//    }
 
     @Redirect(method = "getMobForSpawn", at = @At(
             value = "INVOKE",
