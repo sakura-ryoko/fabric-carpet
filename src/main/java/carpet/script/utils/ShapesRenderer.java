@@ -8,6 +8,7 @@ import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.ByteBufferBuilder;
 import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import com.mojang.blaze3d.vertex.VertexFormat.Mode;
 import com.mojang.math.Axis;
@@ -23,6 +24,7 @@ import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.components.debug.DebugScreenEntries;
+import net.minecraft.client.gui.font.TextRenderable;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderBuffers;
@@ -198,13 +200,13 @@ public class ShapesRenderer
 
 
 
-        normal.render(matrices, bufferSource, cameraa.cameraRenderState, matrix4f);
+        normal.submit(client.gameRenderer.featureRenderDispatcher().getSubmitNodeStorage(), cameraa.cameraRenderState, false);
         bufferSource.uploadAndDraw();
 
         if (false) {
             final RenderTarget mainRenderTarget = Minecraft.getInstance().gameRenderer.mainRenderTarget();
             RenderSystem.getDevice().createCommandEncoder().clearDepthTexture(mainRenderTarget.getDepthTexture(), 1.0);
-            onTop.render(matrices, bufferSource, cameraa.cameraRenderState, matrix4f);
+            onTop.submit(client.gameRenderer.featureRenderDispatcher().getSubmitNodeStorage(), cameraa.cameraRenderState, true);
             bufferSource.uploadAndDraw();
 
             RenderSystem.getDevice().createCommandEncoder().clearDepthTexture(Minecraft.getInstance().gameRenderer.mainRenderTarget().getDepthTexture(), 1.0);
@@ -577,8 +579,18 @@ public class ShapesRenderer
 
 	            // text doesn't appear if backgroud is set
 	            ///script run draw_shape('label', 100, 'pos', [200, 100, 200], 'text', 'Hewwo World!', 'color', 0xffffffff, 'fill', 0x33333333)
-	            textRenderer.drawInBatch(shape.value, text_x, 0.0F, shape.textcolor, false, matrices.last().pose(), immediate, Font.DisplayMode.SEE_THROUGH, shape.textbck, 15728880);
-	            immediate.uploadAndDraw();
+	            //textRenderer.drawInBatch(shape.value, text_x, 0.0F, shape.textcolor, false, matrices.last().pose(), immediate, Font.DisplayMode.SEE_THROUGH, shape.textbck, 15728880);
+
+            final Font.PreparedText preparedText = textRenderer.prepareText(shape.value.getVisualOrderText(), text_x, 0.0F, shape.textcolor, false, false,0);
+            preparedText.visit(new Font.GlyphVisitor() {
+                @Override
+                public void acceptRenderable(final TextRenderable renderable) {
+                    final VertexConsumer buffer = immediate.getBuffer(renderable.renderType(Font.DisplayMode.NORMAL));
+                    renderable.render(matrices.last().pose(), buffer, LightCoordsUtil.FULL_BRIGHT, false);
+                }
+            });
+
+                immediate.uploadAndDraw();
             //}
             matrices.popPose();
             ////RenderSystem.enableCull();
